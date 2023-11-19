@@ -1,15 +1,12 @@
 # frozen_string_literal: true
 
 class DateTimeFormat
-  attr_reader :params, :params_available
+  attr_reader :params, :params_available, :valid, :wrong_params
 
-  DATE_FORMATS = {
+  VALID_FORMATS = {
     'year' => '%Y',
     'month' => '%m',
-    'day' => '%d'
-  }.freeze
-
-  TIME_FORMATS = {
+    'day' => '%d',
     'hour' => '%H',
     'minute' => '%M',
     'second' => '%S'
@@ -17,20 +14,33 @@ class DateTimeFormat
 
   def initialize(params)
     @params = params.split(',')
-    @available_params = DATE_FORMATS.keys + TIME_FORMATS.keys
+    @available_params = VALID_FORMATS.keys
+    @valid = []
+    @wrong_params = []
+  end
+
+  def call
+    @params.each do |param|
+      @valid << find_valid_params(param)
+      @wrong_params << find_wrong_params(param)
+    end
+    @wrong_params.compact!.to_s
   end
 
   def valid?
-    @params.all? { |param| @available_params.include?(param) }
+    @params == @valid
   end
 
-  def wrong_params
-    @params.map { |param| param unless @available_params.include?(param) }.compact!.to_s
+  def find_valid_params(param)
+    param if @available_params.include?(param)
+  end
+
+  def find_wrong_params(param)
+    param unless @available_params.include?(param)
   end
 
   def prepare_datetime
-    date_string = @params.map { |param| DATE_FORMATS[param] }.compact.join('-')
-    time_string = @params.map { |param| TIME_FORMATS[param] }.compact.join(':')
-    Time.now.strftime("#{date_string} #{time_string}".strip)
+    datetime_string = @params.map { |param| VALID_FORMATS[param] }.compact.join('-')
+    Time.now.strftime(datetime_string)
   end
 end
